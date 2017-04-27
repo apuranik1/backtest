@@ -1,0 +1,4 @@
+db <- 'DATABASE'
+uid <- 'USERNAME'
+pwd <- 'PASSWORD'
+driver <- 'DRIVER'
