@@ -41,7 +41,30 @@ obelix.logret_over_period <- function(dbconn, ids, start, end) {
     sqlQuery(dbconn, querystr)
 }
 
+obelix.logret_daily <- function(dbconn, id, start, end) {
+    starttime <- format(date, '%Y%m%d')
+    endtime <- format(date, '%Y%m%d')
+    querystr <- sprintf('SELECT d, r FROM fact_equity WHERE id = %s AND d BETWEEN \'%s\' AND \'%s\';', id, start, end)
+    data <- sqlQuery(dbconn, querystr)
+    as.xts(data$'r', order.by=as.Date(data$d))
+}
+
+portfolio.logret_daily <- function(dbconn, id_weights, start, end) {
+    returns <- lapply(rownames(id_weights),
+                     function(row) {
+                         id_weights[[row, 'weights']] * (exp(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)) - 1)
+                     })
+    returns$all = T
+    fullxts <- do.call(merge.xts, returns)
+    as.xts(log(1 + rowSums(fullxts, na.rm=T,)), order.by=time(fullxts))
+    # fullxts <- as.xts(returns)
+    # log(1 + rowSums(fullxts))
+}
+
+portfolio.bond_returns <- function() {
+}
+
 # compute holdings ratio such that the net beta is 1
-holdings_ratio <- function(beta1, beta2) {
+portfolio.holdings_ratio <- function(beta1, beta2) {
     (beta2 - 1) / (beta1 + beta2)
 }
