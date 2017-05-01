@@ -1,5 +1,6 @@
 library(RODBC)
 library(xts)
+library(quantmod)
 
 # these are all incredibly SQL-injectible
 # good thing we don't care about security
@@ -88,9 +89,10 @@ portfolio.logret_value_weight <- function(dbconn, id_weights, start, end) {
 }
 
 portfolio.bond_returns <- function() {
+    getSymbols('JNK', src="yahoo", assign=F)
 }
 
 # compute holdings ratio such that the net beta is 1
 portfolio.holdings_ratio <- function(beta1, beta2) {
-    (beta2 - 1) / (beta1 + beta2)
+    (beta2 - 1) / (beta2 - beta1)
 }
