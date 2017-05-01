@@ -88,8 +88,8 @@ portfolio.logret_value_weight <- function(dbconn, id_weights, start, end) {
     return(logret)
 }
 
-portfolio.bond_returns <- function() {
-    getSymbols('JNK', src="yahoo", assign=F)
+portfolio.bond_prices <- function() {
+    getSymbols('JNK', src="yahoo", auto.assign=F)
 }
 
 # compute holdings ratio such that the net beta is 1
