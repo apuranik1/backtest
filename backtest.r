@@ -1,4 +1,5 @@
 library(RODBC)
+library(xts)
 
 # these are all incredibly SQL-injectible
 # good thing we don't care about security
@@ -49,16 +50,41 @@ obelix.logret_daily <- function(dbconn, id, start, end) {
     as.xts(data$'r', order.by=as.Date(data$d))
 }
 
+# compute log returns at constant weights
+# I think this function is actually entrirely useless :(
 portfolio.logret_daily <- function(dbconn, id_weights, start, end) {
     returns <- lapply(rownames(id_weights),
-                     function(row) {
-                         id_weights[[row, 'weights']] * (exp(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)) - 1)
-                     })
-    returns$all = T
+                      function(row) {
+                          id_weights[[row, 'weights']] * (exp(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)) - 1)
+                      })
+    returns$all <- T
     fullxts <- do.call(merge.xts, returns)
-    as.xts(log(1 + rowSums(fullxts, na.rm=T,)), order.by=time(fullxts))
-    # fullxts <- as.xts(returns)
-    # log(1 + rowSums(fullxts))
+    fullxts[is.na(fullxts)] <- 0
+    as.xts(log(1 + rowSums(fullxts, na.rm=T)), order.by=time(fullxts))
+}
+
+# compute log returns, where weights start as specified and track value
+# weights must add to 1
+portfolio.growth_of_dollar <- function(dbconn, id_weights, start, end) {
+    # get price at each day * initial weight
+    prices_normalized <- lapply(rownames(id_weights),
+                      function(row) {
+                          id_weights[[row, 'weights']] * exp(cumsum(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)))
+                      })
+    prices_normalized$all <- T
+    fullprices <- do.call(merge.xts, prices_normalized)
+    # initial price is p, ending price is p(1 + simple)
+    # total portfolio value is sum over all of weight * p(1+simple)
+    # price on any given day is now just the sum of rows
+    growth_of_dollar <- as.xts(rowSums(fullprices, na.rm=T), order.by=time(fullprices))
+    return(growth_of_dollar)
+}
+
+portfolio.logret_value_weight <- function(dbconn, id_weights, start, end) {
+    growth <- portfolio.growth_of_dollar(dbconn, id_weights, start, end)
+    logret <- log(diff(growth, arithmetic=F))
+    logret[is.na(logret)] <- 0
+    return(logret)
 }
 
 portfolio.bond_returns <- function() {
