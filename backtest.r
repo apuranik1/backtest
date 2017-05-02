@@ -1,6 +1,7 @@
 library(RODBC)
 library(xts)
 library(quantmod)
+options("getSymbols.warning4.0"=FALSE)
 
 # these are all incredibly SQL-injectible
 # good thing we don't care about security
@@ -51,12 +52,25 @@ obelix.logret_daily <- function(dbconn, id, start, end) {
     as.xts(data$'r', order.by=as.Date(data$d))
 }
 
+analysis.bond_prices <- function() {
+    getSymbols('JNK', src="yahoo", auto.assign=F)$JNK.Adjusted
+}
+
+analysis.spx_prices <- function() {
+    getSymbols('GSPC', src="yahoo", auto.assign=F)$GSPC.Adjusted
+}
+
+analysis.logret <- function(prices) {
+    log(diff(prices, arithmetic=F))
+}
+
 # compute log returns at constant weights
-# I think this function is actually entrirely useless :(
-portfolio.logret_daily <- function(dbconn, id_weights, start, end) {
+# I think this function is actually entirely useless :(
+obelix.logret_daily <- function(dbconn, id_weights, start, end) {
     returns <- lapply(rownames(id_weights),
                       function(row) {
-                          id_weights[[row, 'weights']] * (exp(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)) - 1)
+                          id_weights[[row, 'weights']] *
+                              (exp(obelix.logret_daily(dbconn, id_weights[[row, 'ids']], start, end)) - 1)
                       })
     returns$all <- T
     fullxts <- do.call(merge.xts, returns)
@@ -88,11 +102,8 @@ portfolio.logret_value_weight <- function(dbconn, id_weights, start, end) {
     return(logret)
 }
 
-portfolio.bond_prices <- function() {
-    getSymbols('JNK', src="yahoo", auto.assign=F)
-}
-
 # compute holdings ratio such that the net beta is 1
 portfolio.holdings_ratio <- function(beta1, beta2) {
     (beta2 - 1) / (beta2 - beta1)
 }
+
