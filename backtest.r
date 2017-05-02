@@ -52,16 +52,11 @@ obelix.logret_daily <- function(dbconn, id, start, end) {
     as.xts(data$'r', order.by=as.Date(data$d))
 }
 
-analysis.bond_prices <- function() {
-    getSymbols('JNK', src="yahoo", auto.assign=F)$JNK.Adjusted
-}
-
-analysis.spx_prices <- function() {
-    getSymbols('GSPC', src="yahoo", auto.assign=F)$GSPC.Adjusted
-}
-
-analysis.logret <- function(prices) {
-    log(diff(prices, arithmetic=F))
+obelix.market_cap <- function(dbconn, ids, date) {
+    datestr <- format(date, '%Y%m%d')
+    querystr <- sprintf('SELECT id, cap FROM ??? WHERE id in (%s) AND d = %s',
+                        paste(ids, collapse=','), datestr)
+    sqlQuery(dbconn, querystr)
 }
 
 # compute log returns at constant weights
@@ -76,6 +71,18 @@ obelix.logret_daily <- function(dbconn, id_weights, start, end) {
     fullxts <- do.call(merge.xts, returns)
     fullxts[is.na(fullxts)] <- 0
     as.xts(log(1 + rowSums(fullxts, na.rm=T)), order.by=time(fullxts))
+}
+
+dataprep.bond_prices <- function() {
+    getSymbols('JNK', src="yahoo", auto.assign=F)$JNK.Adjusted
+}
+
+dataprep.spx_prices <- function() {
+    getSymbols('GSPC', src="yahoo", auto.assign=F)$GSPC.Adjusted
+}
+
+dataprep.logret <- function(prices) {
+    log(diff(prices, arithmetic=F))
 }
 
 # compute log returns, where weights start as specified and track value
